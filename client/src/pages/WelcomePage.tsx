@@ -7,7 +7,7 @@ import { styled } from 'baseui';
 import { useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 import { Spinner } from 'baseui/spinner';
-import { Delete, Plus, Menu, Overflow } from 'baseui/icon';
+import { Delete } from 'baseui/icon';
 
 const PageContainer = styled('div', {
   display: 'flex',
