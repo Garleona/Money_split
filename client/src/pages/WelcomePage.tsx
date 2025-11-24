@@ -340,6 +340,55 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
       }
   };
 
+  const handleSettlePayment = async (settlement: Settlement) => {
+      if (!selectedGroup || !user) return;
+      if (!confirm(`Mark payment of ${formatCurrency(settlement.amount)} from ${settlement.from.nickname} to ${settlement.to.nickname} as paid?`)) return;
+
+      // To "settle", we create a transaction where the payer pays the receiver the settlement amount.
+      // Wait, if A owes B $10, it means A pays B $10.
+      // In our system, "A paid $10 for B" effectively cancels out "A owes B $10" (if A originally owed B).
+      // BUT, standard settlement is: A gives money to B.
+      // If A gives money to B, it's like B paid for A? No.
+      // A pays B. A's "paid" amount increases. B's "paid" amount (in the group context) doesn't change, but B receives money.
+      
+      // Let's model it as a Reimbursement transaction:
+      // Description: "Settlement: A -> B"
+      // Amount: $10
+      // Payer: A (The one who owes money)
+      // "Pay for": B (The one who is owed money)
+      
+      // If A pays $10 for B:
+      // A paid $10. A's balance +10.
+      // B "consumed" $10. B's balance -10.
+      // Net effect: A is +10 relative to before, B is -10 relative to before.
+      // If A was -10 (owed) and B was +10 (owed to), this zeros them out. Correct.
+
+      setSavingTransaction(true);
+      try {
+          const res = await fetch(`/api/groups/${selectedGroup.id}/transactions`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  description: `Settlement: ${settlement.from.nickname} -> ${settlement.to.nickname}`,
+                  amount: settlement.amount,
+                  payForUserIds: [settlement.to.id], // Paid FOR the creditor
+              }),
+              credentials: 'include',
+          });
+          const data = await res.json();
+          if (res.ok) {
+              setTransactions([data.transaction, ...transactions]);
+          } else {
+              alert(data.error || 'Failed to record settlement');
+          }
+      } catch (e) {
+          console.error('Failed to settle', e);
+          alert('Network error recording settlement');
+      } finally {
+          setSavingTransaction(false);
+      }
+  };
+
   const formatCurrency = (value: number) =>
       new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(value || 0);
 
@@ -630,7 +679,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
                                     {members.map(member => (
                                         <li key={member.id} style={{ padding: '10px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <div>
-                                                <strong>{member.nickname}</strong> <span style={{color:'#888', fontSize:'0.8em'}}>({member.email})</span>
+                                                <strong>{member.nickname}</strong>
                                                 <div style={{ fontSize: '0.8em', color: '#006064', marginTop: '2px' }}>
                                                     Paid: {formatCurrency(memberTotals[member.id] || 0)} | Owes: {formatCurrency(owedTotals[member.id] || 0)}
                                                 </div>
@@ -673,6 +722,17 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
                                     kind="tertiary"
                                     size="compact"
                                     onClick={() => setShowPayForPicker((prev) => !prev)}
+                                    overrides={{
+                                        BaseButton: {
+                                            style: {
+                                                backgroundColor: '#FFEBEE', // Light pink
+                                                color: '#C62828', // Darker red/pink for text
+                                                ':hover': {
+                                                    backgroundColor: '#FFCDD2',
+                                                },
+                                            },
+                                        },
+                                    }}
                                 >
                                     {selectedPayFor.length > 0
                                         ? `Pay for (${selectedPayFor.length} selected)`
@@ -775,10 +835,22 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
                                     </p>
                                     <ul style={{ listStyle: 'none', padding: 0 }}>
                                         {settlements.map((settlement, idx) => (
-                                            <li key={idx} style={{ padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                                                <strong>{settlement.from.nickname}</strong> should pay{' '}
-                                                <strong>{formatCurrency(settlement.amount)}</strong> to{' '}
-                                                <strong>{settlement.to.nickname}</strong>.
+                                            <li key={idx} style={{ padding: '8px 0', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <strong>{settlement.from.nickname}</strong> should pay{' '}
+                                                    <strong>{formatCurrency(settlement.amount)}</strong> to{' '}
+                                                    <strong>{settlement.to.nickname}</strong>.
+                                                </div>
+                                                {(Number(user.id) === Number(settlement.from.id) || Number(user.id) === Number(settlement.to.id)) && (
+                                                    <Button
+                                                        size="compact"
+                                                        kind="secondary"
+                                                        onClick={() => handleSettlePayment(settlement)}
+                                                        isLoading={savingTransaction}
+                                                    >
+                                                        Unpaid
+                                                    </Button>
+                                                )}
                                             </li>
                                         ))}
                                     </ul>
