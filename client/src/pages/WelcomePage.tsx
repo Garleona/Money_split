@@ -130,9 +130,6 @@ interface TransactionShare {
 const AnyInput = Input as any;
 const AnyFormControl = FormControl as any;
 const DeleteIcon = Delete as any;
-const PlusIcon = Plus as any;
-const MenuIcon = Menu as any; // Using Menu as "Group" list icon
-const OverflowIcon = Overflow as any; // Fallback if needed
 
 type MobileTab = 'account' | 'create' | 'groups';
 
