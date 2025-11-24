@@ -13,6 +13,9 @@ const PageContainer = styled('div', {
   display: 'flex',
   height: '100vh',
   backgroundColor: '#f6f6f6',
+  '@media (max-width: 768px)': {
+    flexDirection: 'column',
+  },
 });
 
 const Sidebar = styled('div', {
@@ -23,12 +26,25 @@ const Sidebar = styled('div', {
   flexDirection: 'column',
   padding: '20px',
   overflowY: 'auto',
+  '@media (max-width: 768px)': {
+    width: '100%',
+    height: 'auto',
+    maxHeight: '40vh',
+    borderRight: 'none',
+    borderTop: '1px solid #eee',
+    order: 2,
+    boxShadow: '0px -2px 10px rgba(0,0,0,0.1)', // Optional shadow for "sheet" feel
+  },
 });
 
 const MainContent = styled('div', {
   flex: 1,
   padding: '40px',
   overflowY: 'auto',
+  '@media (max-width: 768px)': {
+    padding: '15px',
+    order: 1,
+  },
 });
 
 const GroupItem = styled('div', {
@@ -456,7 +472,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
                 </div>
 
                 <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                    <Card title="Invite Members" overrides={{ Root: { style: { width: '300px' } } }}>
+                    <Card title="Invite Members" overrides={{ Root: { style: { width: '300px', '@media (max-width: 768px)': { width: '100%' } } } }}>
                         <StyledBody style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                             <QRCode value={inviteLink} size={150} />
                             
@@ -504,7 +520,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
                                 </Button>
                             </div>
                         }
-                        overrides={{ Root: { style: { flex: 1, minWidth: '300px' } } }}
+                        overrides={{ Root: { style: { flex: 1, minWidth: '300px', '@media (max-width: 768px)': { minWidth: '100%' } } } }}
                     >
                         <StyledBody>
                             {loadingMembers ? <Spinner /> : (
@@ -532,7 +548,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
                 </div>
 
                 <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginTop: '20px' }}>
-                    <Card title="Add Transaction" overrides={{ Root: { style: { width: '320px' } } }}>
+                    <Card title="Add Transaction" overrides={{ Root: { style: { width: '320px', '@media (max-width: 768px)': { width: '100%' } } } }}>
                         <StyledBody>
                             <AnyFormControl label="Description">
                                 <AnyInput
@@ -606,7 +622,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
                                 </Button>
                             </div>
                         }
-                        overrides={{ Root: { style: { flex: 1, minWidth: '320px' } } }}
+                        overrides={{ Root: { style: { flex: 1, minWidth: '320px', '@media (max-width: 768px)': { minWidth: '100%' } } } }}
                     >
                         <StyledBody>
                             {loadingTransactions ? <Spinner /> : (
