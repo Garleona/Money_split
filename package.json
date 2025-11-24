@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "react-qr-code": "^2.0.18"
+    "react-qr-code": "^2.0.18",
+    "react-qr-scanner": "^1.0.0-alpha.11"
   }
 }

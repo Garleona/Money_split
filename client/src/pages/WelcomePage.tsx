@@ -6,8 +6,10 @@ import { FormControl } from 'baseui/form-control';
 import { styled } from 'baseui';
 import { useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
+import QrScanner from 'react-qr-scanner';
 import { Spinner } from 'baseui/spinner';
 import { Delete } from 'baseui/icon';
+import { Modal, ModalHeader, ModalBody, ModalFooter, ModalButton } from 'baseui/modal';
 
 const PageContainer = styled('div', {
   display: 'flex',
@@ -133,6 +135,9 @@ const DeleteIcon = Delete as any;
 
 type MobileTab = 'account' | 'create' | 'groups';
 
+const AnyModal = Modal as any;
+const AnyModalButton = ModalButton as any;
+
 const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [groups, setGroups] = useState<Group[]>([]);
@@ -148,6 +153,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
   const [savingTransaction, setSavingTransaction] = useState(false);
   const [selectedPayFor, setSelectedPayFor] = useState<number[]>([]);
   const [showPayForPicker, setShowPayForPicker] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   
   // Mobile state
   const [activeTab, setActiveTab] = useState<MobileTab>('groups');
@@ -219,6 +225,36 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
       } finally {
           setLoadingMembers(false);
       }
+  };
+
+  const handleScan = (data: any) => {
+    if (data && data.text) {
+      // data.text is the scanned content. 
+      // Our invite link format: http://.../join?code=XXXX
+      // Or it might be just the code if we changed QR generation?
+      // Currently generating full URL.
+      
+      try {
+        const url = new URL(data.text);
+        const code = url.searchParams.get('code');
+        if (code) {
+          setShowScanner(false);
+          // Navigate to join page with the code
+          window.location.href = `/split/join?code=${code}`;
+        } else {
+            // Maybe just the code?
+            // alert('Invalid QR code');
+        }
+      } catch (e) {
+        // Not a URL, maybe just the code?
+        console.log("Scanned text not a URL:", data.text);
+      }
+    }
+  };
+
+  const handleError = (err: any) => {
+    console.error(err);
+    alert('Camera error: ' + err);
   };
 
   const handleCreateGroup = async () => {
@@ -510,6 +546,16 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
           >
               Create Group
           </Button>
+          
+          <div style={{ margin: '20px 0', textAlign: 'center', color: '#aaa' }}>- OR -</div>
+
+          <Button 
+            onClick={() => setShowScanner(true)} 
+            kind="secondary" 
+            style={{ width: '100%' }}
+          >
+              Scan to Join Group
+          </Button>
       </div>
   );
 
@@ -547,7 +593,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
         <hr style={{ width: '100%', border: '0', borderTop: '1px solid #eee' }} />
 
         <SectionTitle>Create New Group</SectionTitle>
-        <div style={{ display: 'flex', gap: '5px' }}>
+        <div style={{ display: 'flex', gap: '5px', marginBottom: '20px' }}>
             <AnyInput 
                 value={groupName}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setGroupName(e.currentTarget.value)}
@@ -558,6 +604,15 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
                 +
             </Button>
         </div>
+
+        <Button 
+            onClick={() => setShowScanner(true)} 
+            kind="secondary" 
+            size="compact" 
+            style={{ width: '100%' }}
+        >
+            Scan to Join Group
+        </Button>
 
         <SectionTitle>Your Groups</SectionTitle>
         {groups.length === 0 && <p style={{color:'#999', fontSize: '0.9em'}}>No groups yet.</p>}
@@ -888,6 +943,30 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
               <span>Groups</span>
           </NavItem>
       </BottomNav>
+
+      {/* QR Scanner Modal */}
+      <AnyModal
+        onClose={() => setShowScanner(false)}
+        isOpen={showScanner}
+        closeable
+      >
+        <ModalHeader>Scan Group QR Code</ModalHeader>
+        <ModalBody style={{ display: 'flex', justifyContent: 'center', backgroundColor: 'black' }}>
+            {showScanner && (
+                <QrScanner
+                    delay={300}
+                    onError={handleError}
+                    onScan={handleScan}
+                    style={{ width: '100%', maxWidth: '400px' }}
+                />
+            )}
+        </ModalBody>
+        <ModalFooter>
+            <AnyModalButton kind="tertiary" onClick={() => setShowScanner(false)}>
+                Cancel
+            </AnyModalButton>
+        </ModalFooter>
+      </AnyModal>
     </PageContainer>
   );
 };
