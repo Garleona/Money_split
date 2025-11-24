@@ -13,10 +13,10 @@ const rootElement = document.getElementById('root');
 if (rootElement) {
   const root = createRoot(rootElement);
   root.render(
-    <StrictMode>
+  <StrictMode>
       <StyletronProvider value={engine}>
         <BaseProvider theme={LightTheme}>
-          <App />
+    <App />
         </BaseProvider>
       </StyletronProvider>
     </StrictMode>
