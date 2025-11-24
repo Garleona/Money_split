@@ -6,6 +6,9 @@ import { Card, StyledBody } from 'baseui/card';
 import { styled } from 'baseui';
 import { StyledLink } from 'baseui/link';
 
+const AnyFormControl = FormControl as any;
+const AnyInput = Input as any;
+
 const Container = styled('div', {
   display: 'flex',
   justifyContent: 'center',
@@ -15,7 +18,7 @@ const Container = styled('div', {
 });
 
 interface RegistrationPageProps {
-  onLogin: (user: { email: string; nickname?: string }) => void;
+  onLogin: (user: { id: number; email: string; nickname?: string }) => void;
 }
 
 const RegistrationPage: React.FC<RegistrationPageProps> = ({ onLogin }) => {
@@ -98,13 +101,13 @@ const RegistrationPage: React.FC<RegistrationPageProps> = ({ onLogin }) => {
         title={isLoginMode ? "Welcome Back" : "Join the Group"}
       >
         <StyledBody>
-          <FormControl
+          <AnyFormControl
             label="Email Address"
             error={!isValid && !validateEmail(email) ? "Please enter a valid email address" : null}
           >
-            <Input
+            <AnyInput
               value={email}
-              onChange={(e) => {
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 setEmail(e.currentTarget.value);
                 setIsValid(true);
                 setError(null);
@@ -114,16 +117,16 @@ const RegistrationPage: React.FC<RegistrationPageProps> = ({ onLogin }) => {
               clearOnEscape
               disabled={isLoading}
             />
-          </FormControl>
+          </AnyFormControl>
 
           {!isLoginMode && (
-              <FormControl
+              <AnyFormControl
                 label="Nickname"
                 caption="What should we call you?"
               >
-                <Input
+                <AnyInput
                   value={nickname}
-                  onChange={(e) => {
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setNickname(e.currentTarget.value);
                     setError(null);
                   }}
@@ -131,16 +134,16 @@ const RegistrationPage: React.FC<RegistrationPageProps> = ({ onLogin }) => {
                   clearOnEscape
                   disabled={isLoading}
                 />
-              </FormControl>
+              </AnyFormControl>
           )}
 
-          <FormControl
+          <AnyFormControl
             label="Password"
             error={error}
           >
-            <Input
+            <AnyInput
               value={password}
-              onChange={(e) => {
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 setPassword(e.currentTarget.value);
                 setError(null);
               }}
@@ -150,15 +153,15 @@ const RegistrationPage: React.FC<RegistrationPageProps> = ({ onLogin }) => {
               clearOnEscape
               disabled={isLoading}
             />
-          </FormControl>
+          </AnyFormControl>
 
           {!isLoginMode && (
-            <FormControl
+            <AnyFormControl
                 label="Confirm Password"
             >
-                <Input
+                <AnyInput
                 value={confirmPassword}
-                onChange={(e) => {
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setConfirmPassword(e.currentTarget.value);
                     setError(null);
                 }}
@@ -166,13 +169,13 @@ const RegistrationPage: React.FC<RegistrationPageProps> = ({ onLogin }) => {
                 placeholder="********"
                 clearOnEscape
                 disabled={isLoading}
-                onKeyDown={(e) => {
+                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                     if (e.key === 'Enter') {
                         handleSubmit();
                     }
                 }}
                 />
-            </FormControl>
+            </AnyFormControl>
           )}
 
           <Button 
