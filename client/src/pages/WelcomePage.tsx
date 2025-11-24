@@ -228,26 +228,24 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
   };
 
   const handleScan = (data: any) => {
-    if (data && data.text) {
-      // data.text is the scanned content. 
-      // Our invite link format: http://.../join?code=XXXX
-      // Or it might be just the code if we changed QR generation?
-      // Currently generating full URL.
-      
-      try {
-        const url = new URL(data.text);
-        const code = url.searchParams.get('code');
-        if (code) {
-          setShowScanner(false);
-          // Navigate to join page with the code
-          window.location.href = `/split/join?code=${code}`;
-        } else {
-            // Maybe just the code?
-            // alert('Invalid QR code');
+    if (data) {
+      const text = data.text || data; // react-qr-scanner might return object with text or just string depending on version/device
+      if (text) {
+        try {
+          // Try to construct URL from text if it's not already one
+          const urlString = text.startsWith('http') ? text : `http://dummy/${text}`; 
+          const url = new URL(urlString);
+          
+          // Check if it's our expected URL format OR just look for 'code' param
+          const code = url.searchParams.get('code');
+          
+          if (code) {
+            setShowScanner(false);
+            window.location.href = `/split/join?code=${code}`;
+          }
+        } catch (e) {
+          console.log("Scanned text parse error:", text, e);
         }
-      } catch (e) {
-        // Not a URL, maybe just the code?
-        console.log("Scanned text not a URL:", data.text);
       }
     }
   };
@@ -951,13 +949,16 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
         closeable
       >
         <ModalHeader>Scan Group QR Code</ModalHeader>
-        <ModalBody style={{ display: 'flex', justifyContent: 'center', backgroundColor: 'black' }}>
+        <ModalBody style={{ display: 'flex', justifyContent: 'center', backgroundColor: '#000' }}>
             {showScanner && (
                 <QrScanner
                     delay={300}
                     onError={handleError}
                     onScan={handleScan}
                     style={{ width: '100%', maxWidth: '400px' }}
+                    constraints={{
+                        video: { facingMode: 'environment' } // Force back camera
+                    }}
                 />
             )}
         </ModalBody>
