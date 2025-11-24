@@ -58,7 +58,7 @@ function App() {
   if (loading) return <div>Loading...</div>;
 
   return (
-    <Router>
+    <Router basename="/split">
       <Routes>
         <Route 
           path="/" 

@@ -290,7 +290,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
   const formatCurrency = (value: number) =>
       new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(value || 0);
 
-  const inviteLink = selectedGroup ? `${window.location.origin}/join?code=${selectedGroup.invite_code}` : '';
+  const inviteLink = selectedGroup ? `${window.location.origin}/split/join?code=${selectedGroup.invite_code}` : '';
 
   const paidTotals = React.useMemo(() => {
       const totals: Record<number, number> = {};
