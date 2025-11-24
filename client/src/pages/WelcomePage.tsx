@@ -157,6 +157,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
   const [selectedPayFor, setSelectedPayFor] = useState<number[]>([]);
   const [showPayForPicker, setShowPayForPicker] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const hasHydratedSelectedGroup = React.useRef(false);
   const [settlementStatus, setSettlementStatus] = useState<Record<string, 'paid' | 'unpaid'>>({});
   
   // Mobile state
@@ -190,10 +191,13 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
           fetchTransactions(selectedGroup.id);
           setSelectedPayFor([]);
           setShowPayForPicker(false);
-          localStorage.setItem('selectedGroupId', selectedGroup.id.toString());
-      } else {
+          if (hasHydratedSelectedGroup.current) {
+              localStorage.setItem('selectedGroupId', selectedGroup.id.toString());
+          }
+      } else if (hasHydratedSelectedGroup.current) {
           localStorage.removeItem('selectedGroupId');
       }
+      hasHydratedSelectedGroup.current = true;
   }, [selectedGroup]);
 
   const fetchGroups = async () => {
