@@ -160,7 +160,10 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
   const [settlementStatus, setSettlementStatus] = useState<Record<string, 'paid' | 'unpaid'>>({});
   
   // Mobile state
-  const [activeTab, setActiveTab] = useState<MobileTab>('groups');
+  const [activeTab, setActiveTab] = useState<MobileTab>(() => {
+    const storedTab = localStorage.getItem('activeTab') as MobileTab | null;
+    return storedTab || 'groups';
+  });
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -168,6 +171,10 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('activeTab', activeTab);
+  }, [activeTab]);
 
   useEffect(() => {
     if (!user) {
@@ -183,6 +190,9 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
           fetchTransactions(selectedGroup.id);
           setSelectedPayFor([]);
           setShowPayForPicker(false);
+          localStorage.setItem('selectedGroupId', selectedGroup.id.toString());
+      } else {
+          localStorage.removeItem('selectedGroupId');
       }
   }, [selectedGroup]);
 
@@ -192,6 +202,14 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
           if (res.ok) {
               const data = await res.json();
               setGroups(data.groups);
+
+              const storedGroupId = localStorage.getItem('selectedGroupId');
+              if (storedGroupId) {
+                  const group = data.groups.find((g: Group) => g.id === Number(storedGroupId));
+                  if (group) {
+                      setSelectedGroup(group);
+                  }
+              }
           }
       } catch (e) {
           console.error("Failed to fetch groups", e);
