@@ -4,6 +4,7 @@ const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { db, initDb } = require('./db');
+const { logDbChange } = require('./dbLogger');
 
 const app = express();
 const PORT = 3001;
@@ -69,6 +70,7 @@ app.post('/api/register', (req, res) => {
         
         const newUser = { id: this.lastID, email, nickname };
         res.cookie('userId', newUser.id, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
+        logDbChange('USER_REGISTERED', { userId: newUser.id, email });
         return res.json({ message: 'Registered successfully', user: newUser });
       });
     }
@@ -111,6 +113,7 @@ app.post('/api/groups', (req, res) => {
     db.run('INSERT INTO group_members (group_id, user_id) VALUES (?, ?)', [groupId, userId], (err) => {
       if (err) return res.status(500).json({ error: 'Failed to add member' });
       
+      logDbChange('GROUP_CREATED', { groupId, name, createdBy: Number(userId) });
       res.json({ 
         message: 'Group created', 
         group: { id: groupId, name, invite_code: inviteCode, created_by: userId } 
@@ -137,6 +140,7 @@ app.post('/api/groups/join', (req, res) => {
         }
         return res.status(500).json({ error: err.message });
       }
+      logDbChange('GROUP_MEMBER_ADDED', { groupId: group.id, userId: Number(userId), via: 'join_endpoint' });
       res.json({ message: 'Joined group successfully', group });
     });
   });
@@ -347,7 +351,14 @@ app.post('/api/groups/:id/transactions', (req, res) => {
                   WHERE ts.transaction_id = ?
                 `, [transactionId], (err, shares) => {
                   if (err) return res.status(500).json({ error: err.message });
-                  res.json({ transaction: { ...row, shares } });
+                  const transactionPayload = { ...row, shares };
+                  logDbChange('TRANSACTION_ADDED', {
+                    transactionId,
+                    groupId,
+                    createdBy: userId,
+                    amount: numericAmount,
+                  });
+                  res.json({ transaction: transactionPayload });
                 });
               });
               return;
@@ -403,28 +414,51 @@ app.post('/api/groups/:id/transactions', (req, res) => {
 
 // Delete Group (Creator only)
 app.delete('/api/groups/:id', (req, res) => {
-  const userId = req.cookies.userId;
+  const userId = Number(req.cookies.userId);
   if (!userId) return res.status(401).json({ error: 'Not authenticated' });
-  const groupId = req.params.id;
+  const groupId = Number(req.params.id);
+  if (Number.isNaN(groupId)) return res.status(400).json({ error: 'Invalid group id' });
 
   db.get('SELECT * FROM groups WHERE id = ?', [groupId], (err, group) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!group) return res.status(404).json({ error: 'Group not found' });
     
     // Check if creator
-    if (group.created_by !== userId) {
+    if (Number(group.created_by) !== userId) {
       return res.status(403).json({ error: 'Only the creator can delete the group' });
     }
 
-    // Delete members first (foreign key constraint)
-    db.run('DELETE FROM group_members WHERE group_id = ?', [groupId], (err) => {
-      if (err) return res.status(500).json({ error: err.message });
-      
-      // Delete group
-      db.run('DELETE FROM groups WHERE id = ?', [groupId], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Group deleted' });
-      });
+    const rollback = (message) => {
+      db.run('ROLLBACK', () => res.status(500).json({ error: message }));
+    };
+
+    db.serialize(() => {
+      db.run('BEGIN TRANSACTION');
+      db.run(
+        'DELETE FROM transaction_shares WHERE transaction_id IN (SELECT id FROM transactions WHERE group_id = ?)',
+        [groupId],
+        (err) => {
+          if (err) return rollback(err.message);
+
+          db.run('DELETE FROM transactions WHERE group_id = ?', [groupId], (err) => {
+            if (err) return rollback(err.message);
+
+            db.run('DELETE FROM group_members WHERE group_id = ?', [groupId], (err) => {
+              if (err) return rollback(err.message);
+
+              db.run('DELETE FROM groups WHERE id = ?', [groupId], (err) => {
+                if (err) return rollback(err.message);
+
+                db.run('COMMIT', (err) => {
+                  if (err) return rollback(err.message);
+                  logDbChange('GROUP_DELETED', { groupId, deletedBy: userId });
+                  res.json({ message: 'Group deleted' });
+                });
+              });
+            });
+          });
+        }
+      );
     });
   });
 });
@@ -468,6 +502,11 @@ app.delete('/api/groups/:groupId/members/:memberId', (req, res) => {
 
     db.run('DELETE FROM group_members WHERE group_id = ? AND user_id = ?', [groupId, targetUserId], (err) => {
       if (err) return res.status(500).json({ error: err.message });
+      logDbChange(isSelf ? 'GROUP_MEMBER_LEFT' : 'GROUP_MEMBER_REMOVED', {
+        groupId: Number(groupId),
+        userId: targetUserId,
+        actedBy: Number(userId),
+      });
       res.json({ message: isSelf ? 'Left group' : 'Member removed' });
     });
   });
