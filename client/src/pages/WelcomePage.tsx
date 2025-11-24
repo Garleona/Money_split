@@ -157,6 +157,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
   const [selectedPayFor, setSelectedPayFor] = useState<number[]>([]);
   const [showPayForPicker, setShowPayForPicker] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [settlementStatus, setSettlementStatus] = useState<Record<string, 'paid' | 'unpaid'>>({});
   
   // Mobile state
   const [activeTab, setActiveTab] = useState<MobileTab>('groups');
@@ -381,6 +382,8 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
       if (!selectedGroup || !user) return;
       if (!confirm(`Mark payment of ${formatCurrency(settlement.amount)} from ${settlement.from.nickname} to ${settlement.to.nickname} as paid?`)) return;
 
+      const settlementKey = `${settlement.from.id}-${settlement.to.id}-${settlement.amount}`;
+
       // To "settle", we create a transaction where the payer pays the receiver the settlement amount.
       // Wait, if A owes B $10, it means A pays B $10.
       // In our system, "A paid $10 for B" effectively cancels out "A owes B $10" (if A originally owed B).
@@ -415,6 +418,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
           const data = await res.json();
           if (res.ok) {
               setTransactions([data.transaction, ...transactions]);
+              setSettlementStatus((prev) => ({ ...prev, [settlementKey]: 'paid' }));
           } else {
               alert(data.error || 'Failed to record settlement');
           }
@@ -698,25 +702,39 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
                                         The following payments will balance the group:
                                     </p>
                                     <ul style={{ listStyle: 'none', padding: 0 }}>
-                                        {settlements.map((settlement, idx) => (
-                                            <li key={idx} style={{ padding: '8px 0', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div>
-                                                    <strong>{settlement.from.nickname}</strong> should pay{' '}
-                                                    <strong>{formatCurrency(settlement.amount)}</strong> to{' '}
-                                                    <strong>{settlement.to.nickname}</strong>.
-                                                </div>
-                                                {(Number(user.id) === Number(settlement.from.id) || Number(user.id) === Number(settlement.to.id)) && (
-                                                    <Button
-                                                        size="compact"
-                                                        kind="secondary"
-                                                        onClick={() => handleSettlePayment(settlement)}
-                                                        isLoading={savingTransaction}
-                                                    >
-                                                        Unpaid
-                                                    </Button>
-                                                )}
-                                            </li>
-                                        ))}
+                                        {settlements.map((settlement, idx) => {
+                                            const settlementKey = `${settlement.from.id}-${settlement.to.id}-${settlement.amount}`;
+                                            const isPaid = settlementStatus[settlementKey] === 'paid';
+                                            const isParticipant = Number(user.id) === Number(settlement.from.id) || Number(user.id) === Number(settlement.to.id);
+
+                                            return (
+                                                <li key={idx} style={{ padding: '8px 0', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <div>
+                                                        <strong>{settlement.from.nickname}</strong> should pay{' '}
+                                                        <strong>{formatCurrency(settlement.amount)}</strong> to{' '}
+                                                        <strong>{settlement.to.nickname}</strong>.
+                                                    </div>
+                                                    {isParticipant && (
+                                                        <Button
+                                                            size="compact"
+                                                            kind={isPaid ? 'primary' : 'secondary'}
+                                                            onClick={() => !isPaid && handleSettlePayment(settlement)}
+                                                            disabled={isPaid}
+                                                            overrides={{
+                                                                BaseButton: {
+                                                                    style: {
+                                                                        backgroundColor: isPaid ? '#2e7d32' : undefined,
+                                                                        color: isPaid ? '#fff' : undefined,
+                                                                    },
+                                                                },
+                                                            }}
+                                                        >
+                                                            {isPaid ? 'Paid' : 'Unpaid'}
+                                                        </Button>
+                                                    )}
+                                                </li>
+                                            );
+                                        })}
                                     </ul>
                                 </div>
                             )}
