@@ -7,7 +7,7 @@ import { styled } from 'baseui';
 import { useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 import { Spinner } from 'baseui/spinner';
-import { Delete } from 'baseui/icon';
+import { Delete, Plus, Menu, Overflow } from 'baseui/icon';
 
 const PageContainer = styled('div', {
   display: 'flex',
@@ -15,6 +15,7 @@ const PageContainer = styled('div', {
   backgroundColor: '#f6f6f6',
   '@media (max-width: 768px)': {
     flexDirection: 'column',
+    paddingBottom: '60px', // Space for bottom nav
   },
 });
 
@@ -27,13 +28,7 @@ const Sidebar = styled('div', {
   padding: '20px',
   overflowY: 'auto',
   '@media (max-width: 768px)': {
-    width: '100%',
-    height: 'auto',
-    maxHeight: '40vh',
-    borderRight: 'none',
-    borderTop: '1px solid #eee',
-    order: 2,
-    boxShadow: '0px -2px 10px rgba(0,0,0,0.1)', // Optional shadow for "sheet" feel
+    display: 'none', // Hide completely on mobile, use BottomNav instead
   },
 });
 
@@ -43,8 +38,38 @@ const MainContent = styled('div', {
   overflowY: 'auto',
   '@media (max-width: 768px)': {
     padding: '15px',
-    order: 1,
+    width: '100%',
   },
+});
+
+const BottomNav = styled('div', {
+  display: 'none',
+  '@media (max-width: 768px)': {
+    display: 'flex',
+    position: 'fixed',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderTop: '1px solid #eee',
+    height: '60px',
+    zIndex: 1000,
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    boxShadow: '0px -2px 10px rgba(0,0,0,0.05)',
+  },
+});
+
+const NavItem = styled('div', {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flex: 1,
+  height: '100%',
+  cursor: 'pointer',
+  color: '#666',
+  fontSize: '0.8rem',
 });
 
 const GroupItem = styled('div', {
@@ -105,6 +130,11 @@ interface TransactionShare {
 const AnyInput = Input as any;
 const AnyFormControl = FormControl as any;
 const DeleteIcon = Delete as any;
+const PlusIcon = Plus as any;
+const MenuIcon = Menu as any; // Using Menu as "Group" list icon
+const OverflowIcon = Overflow as any; // Fallback if needed
+
+type MobileTab = 'account' | 'create' | 'groups';
 
 const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
   const navigate = useNavigate();
@@ -121,6 +151,16 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
   const [savingTransaction, setSavingTransaction] = useState(false);
   const [selectedPayFor, setSelectedPayFor] = useState<number[]>([]);
   const [showPayForPicker, setShowPayForPicker] = useState(false);
+  
+  // Mobile state
+  const [activeTab, setActiveTab] = useState<MobileTab>('groups');
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -398,8 +438,57 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
 
   const isCreator = selectedGroup && user && Number(selectedGroup.created_by) === Number(user.id);
 
+  // Mobile Views Renderers
+  const renderMobileAccount = () => (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+          {user.nickname && <h2>{user.nickname}</h2>}
+          <p style={{ color: '#666', fontSize: '0.9em', marginBottom: '20px' }}>{user.email}</p>
+          <Button onClick={onLogout} kind="secondary" style={{ width: '100%' }}>
+              Logout
+          </Button>
+      </div>
+  );
+
+  const renderMobileCreate = () => (
+      <div style={{ padding: '20px' }}>
+          <SectionTitle>Create New Group</SectionTitle>
+          <AnyInput 
+              value={groupName}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setGroupName(e.currentTarget.value)}
+              placeholder="Group Name"
+          />
+          <Button 
+            onClick={() => { handleCreateGroup().then(() => { if (groupName.trim()) setActiveTab('groups'); }); }} 
+            isLoading={isCreating} 
+            style={{ width: '100%', marginTop: '10px' }}
+          >
+              Create Group
+          </Button>
+      </div>
+  );
+
+  const renderMobileGroupsList = () => (
+      <div style={{ padding: '10px' }}>
+           <SectionTitle>Your Groups</SectionTitle>
+            {groups.length === 0 && <p style={{color:'#999', fontSize: '0.9em', textAlign: 'center', marginTop: '20px'}}>No groups yet.</p>}
+            {groups.map(group => (
+                <GroupItem 
+                    key={group.id} 
+                    onClick={() => { setSelectedGroup(group); /* Stay in groups tab, but view details */ }}
+                    style={{ 
+                        backgroundColor: selectedGroup?.id === group.id ? '#e0f7fa' : 'white',
+                        borderColor: selectedGroup?.id === group.id ? '#00acc1' : '#eee'
+                    }}
+                >
+                    <strong>{group.name}</strong>
+                </GroupItem>
+            ))}
+      </div>
+  );
+
   return (
     <PageContainer>
+      {/* Desktop Sidebar */}
       <Sidebar>
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
             {user.nickname && <h2>{user.nickname}</h2>}
@@ -441,12 +530,28 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
       </Sidebar>
 
       <MainContent>
-        {!selectedGroup ? (
+        {isMobile && activeTab === 'account' ? (
+            renderMobileAccount()
+        ) : isMobile && activeTab === 'create' ? (
+            renderMobileCreate()
+        ) : isMobile && activeTab === 'groups' && !selectedGroup ? (
+            renderMobileGroupsList()
+        ) : !selectedGroup ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>
                 <h2>Select a group to view details</h2>
             </div>
         ) : (
             <div>
+                {isMobile && (
+                    <Button 
+                        kind="tertiary" 
+                        size="compact" 
+                        onClick={() => setSelectedGroup(null)}
+                        style={{ marginBottom: '10px' }}
+                    >
+                        ← Back to Groups
+                    </Button>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <h1>{selectedGroup.name}</h1>
                     <div>
@@ -688,6 +793,32 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
             </div>
         )}
       </MainContent>
+
+      <BottomNav>
+          <NavItem 
+            onClick={() => { setActiveTab('account'); setSelectedGroup(null); }}
+            style={{ color: activeTab === 'account' ? 'black' : '#888' }}
+          >
+              <div style={{ fontSize: '20px' }}>👤</div> {/* Fallback icon */}
+              <span>Account</span>
+          </NavItem>
+          
+          <NavItem 
+            onClick={() => { setActiveTab('create'); setSelectedGroup(null); }}
+            style={{ color: activeTab === 'create' ? 'black' : '#888' }}
+          >
+             <div style={{ fontSize: '24px', fontWeight: 'bold' }}>+</div>
+             <span>New Group</span>
+          </NavItem>
+
+          <NavItem 
+            onClick={() => { setActiveTab('groups'); setSelectedGroup(null); }}
+            style={{ color: activeTab === 'groups' ? 'black' : '#888' }}
+          >
+              <div style={{ fontSize: '20px' }}>☰</div> {/* Fallback icon */}
+              <span>Groups</span>
+          </NavItem>
+      </BottomNav>
     </PageContainer>
   );
 };
