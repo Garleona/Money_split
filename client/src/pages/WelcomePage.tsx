@@ -622,6 +622,52 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
                     </div>
                 </div>
 
+                <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+                    <Card title="Settlement Summary">
+                        <StyledBody>
+                            {members.length === 0 ? (
+                                <p style={{ color: '#888' }}>No members yet.</p>
+                            ) : groupTotal === 0 ? (
+                                <p style={{ color: '#888' }}>No spending recorded yet.</p>
+                            ) : settlements.length === 0 ? (
+                                <div>
+                                    <p style={{ color: '#2e7d32', fontWeight: 600 }}>All settled!</p>
+                                    <p style={{ fontSize: '0.9em' }}>
+                                        Everyone has contributed exactly what they owe.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div>
+                                    <p style={{ fontSize: '0.9em', marginBottom: '10px' }}>
+                                        The following payments will balance the group:
+                                    </p>
+                                    <ul style={{ listStyle: 'none', padding: 0 }}>
+                                        {settlements.map((settlement, idx) => (
+                                            <li key={idx} style={{ padding: '8px 0', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <strong>{settlement.from.nickname}</strong> should pay{' '}
+                                                    <strong>{formatCurrency(settlement.amount)}</strong> to{' '}
+                                                    <strong>{settlement.to.nickname}</strong>.
+                                                </div>
+                                                {(Number(user.id) === Number(settlement.from.id) || Number(user.id) === Number(settlement.to.id)) && (
+                                                    <Button
+                                                        size="compact"
+                                                        kind="secondary"
+                                                        onClick={() => handleSettlePayment(settlement)}
+                                                        isLoading={savingTransaction}
+                                                    >
+                                                        Unpaid
+                                                    </Button>
+                                                )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </StyledBody>
+                    </Card>
+                </div>
+
                 <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                     <Card title="Invite Members" overrides={{ Root: { style: { width: '300px', '@media (max-width: 768px)': { width: '100%' } } } }}>
                         <StyledBody style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -809,52 +855,6 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
                                         </li>
                                     ))}
                                 </ul>
-                            )}
-                        </StyledBody>
-                    </Card>
-                </div>
-
-                <div style={{ marginTop: '20px' }}>
-                    <Card title="Settlement Summary">
-                        <StyledBody>
-                            {members.length === 0 ? (
-                                <p style={{ color: '#888' }}>No members yet.</p>
-                            ) : groupTotal === 0 ? (
-                                <p style={{ color: '#888' }}>No spending recorded yet.</p>
-                            ) : settlements.length === 0 ? (
-                                <div>
-                                    <p style={{ color: '#2e7d32', fontWeight: 600 }}>All settled!</p>
-                                    <p style={{ fontSize: '0.9em' }}>
-                                        Everyone has contributed exactly what they owe.
-                                    </p>
-                                </div>
-                            ) : (
-                                <div>
-                                    <p style={{ fontSize: '0.9em', marginBottom: '10px' }}>
-                                        The following payments will balance the group:
-                                    </p>
-                                    <ul style={{ listStyle: 'none', padding: 0 }}>
-                                        {settlements.map((settlement, idx) => (
-                                            <li key={idx} style={{ padding: '8px 0', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div>
-                                                    <strong>{settlement.from.nickname}</strong> should pay{' '}
-                                                    <strong>{formatCurrency(settlement.amount)}</strong> to{' '}
-                                                    <strong>{settlement.to.nickname}</strong>.
-                                                </div>
-                                                {(Number(user.id) === Number(settlement.from.id) || Number(user.id) === Number(settlement.to.id)) && (
-                                                    <Button
-                                                        size="compact"
-                                                        kind="secondary"
-                                                        onClick={() => handleSettlePayment(settlement)}
-                                                        isLoading={savingTransaction}
-                                                    >
-                                                        Unpaid
-                                                    </Button>
-                                                )}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
                             )}
                         </StyledBody>
                     </Card>
