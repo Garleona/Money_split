@@ -4,7 +4,7 @@ import { Card, StyledBody } from 'baseui/card';
 import { Input } from 'baseui/input';
 import { FormControl } from 'baseui/form-control';
 import { styled } from 'baseui';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 import QrScanner from 'react-qr-scanner';
 import { Spinner } from 'baseui/spinner';
@@ -143,6 +143,7 @@ const AnyModalButton = ModalButton as any;
 
 const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
   const navigate = useNavigate();
+  const { groupId } = useParams<{ groupId?: string }>();
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -157,7 +158,6 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
   const [selectedPayFor, setSelectedPayFor] = useState<number[]>([]);
   const [showPayForPicker, setShowPayForPicker] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const hasHydratedSelectedGroup = React.useRef(false);
   const [settlementStatus, setSettlementStatus] = useState<Record<string, 'paid' | 'unpaid'>>({});
   
   // Mobile state
@@ -191,14 +191,21 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
           fetchTransactions(selectedGroup.id);
           setSelectedPayFor([]);
           setShowPayForPicker(false);
-          if (hasHydratedSelectedGroup.current) {
-              localStorage.setItem('selectedGroupId', selectedGroup.id.toString());
-          }
-      } else if (hasHydratedSelectedGroup.current) {
-          localStorage.removeItem('selectedGroupId');
       }
-      hasHydratedSelectedGroup.current = true;
   }, [selectedGroup]);
+
+  useEffect(() => {
+      if (!groups.length) return;
+
+      if (groupId) {
+          const group = groups.find(g => g.id === Number(groupId));
+          if (group && (!selectedGroup || selectedGroup.id !== group.id)) {
+              setSelectedGroup(group);
+          }
+      } else if (selectedGroup) {
+          setSelectedGroup(null);
+      }
+  }, [groupId, groups]);
 
   const fetchGroups = async () => {
       try {
@@ -206,14 +213,6 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
           if (res.ok) {
               const data = await res.json();
               setGroups(data.groups);
-
-              const storedGroupId = localStorage.getItem('selectedGroupId');
-              if (storedGroupId) {
-                  const group = data.groups.find((g: Group) => g.id === Number(storedGroupId));
-                  if (group) {
-                      setSelectedGroup(group);
-                  }
-              }
           }
       } catch (e) {
           console.error("Failed to fetch groups", e);
@@ -281,6 +280,16 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
     alert('Camera error: ' + err);
   };
 
+  const handleSelectGroup = (group: Group | null) => {
+    if (group) {
+      setSelectedGroup(group);
+      navigate(`/welcome/${group.id}`);
+    } else {
+      setSelectedGroup(null);
+      navigate('/welcome');
+    }
+  };
+
   const handleCreateGroup = async () => {
     if (!groupName.trim()) return;
     setIsCreating(true);
@@ -296,7 +305,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
         const newGroup = data.group;
         setGroups([...groups, newGroup]);
         setGroupName('');
-        setSelectedGroup(newGroup); 
+        handleSelectGroup(newGroup); 
       } else {
         alert(data.error || 'Failed to create group');
       }
@@ -315,7 +324,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
           const res = await fetch(`/api/groups/${selectedGroup.id}`, { method: 'DELETE', credentials: 'include' });
           if (res.ok) {
               setGroups(groups.filter(g => g.id !== selectedGroup.id));
-              setSelectedGroup(null);
+              handleSelectGroup(null);
           } else {
               alert('Failed to delete group');
           }
@@ -332,7 +341,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
         const res = await fetch(`/api/groups/${selectedGroup.id}/members/${user.id}`, { method: 'DELETE', credentials: 'include' });
         if (res.ok) {
             setGroups(groups.filter(g => g.id !== selectedGroup.id));
-            setSelectedGroup(null);
+            handleSelectGroup(null);
         } else {
             const data = await res.json();
             alert(data.error || 'Failed to leave group');
@@ -586,14 +595,14 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
       </div>
   );
 
-  const renderMobileGroupsList = () => (
+const renderMobileGroupsList = () => (
       <div style={{ padding: '10px' }}>
            <SectionTitle>Your Groups</SectionTitle>
             {groups.length === 0 && <p style={{color:'#999', fontSize: '0.9em', textAlign: 'center', marginTop: '20px'}}>No groups yet.</p>}
             {groups.map(group => (
                 <GroupItem 
                     key={group.id} 
-                    onClick={() => { setSelectedGroup(group); /* Stay in groups tab, but view details */ }}
+                    onClick={() => handleSelectGroup(group)}
                     style={{ 
                         backgroundColor: selectedGroup?.id === group.id ? '#e0f7fa' : 'white',
                         borderColor: selectedGroup?.id === group.id ? '#00acc1' : '#eee'
@@ -646,7 +655,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
         {groups.map(group => (
             <GroupItem 
                 key={group.id} 
-                onClick={() => setSelectedGroup(group)}
+                onClick={() => handleSelectGroup(group)}
                 style={{ 
                     backgroundColor: selectedGroup?.id === group.id ? '#e0f7fa' : 'white',
                     borderColor: selectedGroup?.id === group.id ? '#00acc1' : '#eee'
@@ -674,7 +683,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
                     <Button 
                         kind="tertiary" 
                         size="compact" 
-                        onClick={() => setSelectedGroup(null)}
+                        onClick={() => handleSelectGroup(null)}
                         style={{ marginBottom: '10px' }}
                     >
                         ← Back to Groups
@@ -961,7 +970,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
 
       <BottomNav>
           <NavItem 
-            onClick={() => { setActiveTab('account'); setSelectedGroup(null); }}
+            onClick={() => { setActiveTab('account'); handleSelectGroup(null); }}
             style={{ color: activeTab === 'account' ? 'black' : '#888' }}
           >
               <div style={{ fontSize: '20px' }}>👤</div> {/* Fallback icon */}
@@ -969,7 +978,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
           </NavItem>
           
           <NavItem 
-            onClick={() => { setActiveTab('create'); setSelectedGroup(null); }}
+            onClick={() => { setActiveTab('create'); handleSelectGroup(null); }}
             style={{ color: activeTab === 'create' ? 'black' : '#888' }}
           >
              <div style={{ fontSize: '24px', fontWeight: 'bold' }}>+</div>
@@ -977,7 +986,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
           </NavItem>
 
           <NavItem 
-            onClick={() => { setActiveTab('groups'); setSelectedGroup(null); }}
+            onClick={() => { setActiveTab('groups'); handleSelectGroup(null); }}
             style={{ color: activeTab === 'groups' ? 'black' : '#888' }}
           >
               <div style={{ fontSize: '20px' }}>☰</div> {/* Fallback icon */}

@@ -65,7 +65,7 @@ function App() {
           element={!user ? <RegistrationPage onLogin={handleLogin} /> : <Navigate to="/welcome" />} 
         />
         <Route 
-          path="/welcome" 
+          path="/welcome/:groupId?" 
           element={user ? <WelcomePage user={user} onLogout={handleLogout} /> : <Navigate to="/" />} 
         />
         <Route 
