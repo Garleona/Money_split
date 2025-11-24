@@ -1,0 +1,1 @@
+Use the update_memory tool to record that the user's shell (PowerShell) does not support '&&' and that ';' should be used instead or commands should be run separately.
