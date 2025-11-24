@@ -15,9 +15,11 @@ const PageContainer = styled('div', {
   display: 'flex',
   height: '100vh',
   backgroundColor: '#f6f6f6',
-  '@media (max-width: 768px)': {
-    flexDirection: 'column',
-    paddingBottom: '60px', // Space for bottom nav
+  flexDirection: 'column',
+  paddingBottom: '70px', // Space for bottom nav
+  '@media (min-width: 769px)': {
+    flexDirection: 'row',
+    paddingBottom: '0px',
   },
 });
 
@@ -29,6 +31,9 @@ const Sidebar = styled('div', {
   flexDirection: 'column',
   padding: '20px',
   overflowY: 'auto',
+  '@media (min-width: 769px)': {
+    height: '100vh',
+  },
   '@media (max-width: 768px)': {
     display: 'none', // Hide completely on mobile, use BottomNav instead
   },
@@ -36,30 +41,28 @@ const Sidebar = styled('div', {
 
 const MainContent = styled('div', {
   flex: 1,
-  padding: '40px',
+  padding: '20px',
+  width: '100%',
   overflowY: 'auto',
-  '@media (max-width: 768px)': {
-    padding: '15px',
-    width: '100%',
+  '@media (min-width: 769px)': {
+    padding: '40px',
+    height: '100vh',
   },
 });
 
 const BottomNav = styled('div', {
-  display: 'none',
-  '@media (max-width: 768px)': {
-    display: 'flex',
-    position: 'fixed',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'white',
-    borderTop: '1px solid #eee',
-    height: '60px',
-    zIndex: 1000,
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    boxShadow: '0px -2px 10px rgba(0,0,0,0.05)',
-  },
+  display: 'flex',
+  position: 'fixed',
+  bottom: 0,
+  left: 0,
+  right: 0,
+  backgroundColor: 'white',
+  borderTop: '1px solid #eee',
+  height: '60px',
+  zIndex: 1000,
+  justifyContent: 'space-around',
+  alignItems: 'center',
+  boxShadow: '0px -2px 10px rgba(0,0,0,0.05)',
 });
 
 const NavItem = styled('div', {
