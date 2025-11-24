@@ -191,6 +191,20 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
           fetchTransactions(selectedGroup.id);
           setSelectedPayFor([]);
           setShowPayForPicker(false);
+
+          const storedStatuses = localStorage.getItem(`settlementStatus_${selectedGroup.id}`);
+          if (storedStatuses) {
+              try {
+                  setSettlementStatus(JSON.parse(storedStatuses));
+              } catch (e) {
+                  console.warn('Failed to parse stored settlement status', e);
+                  setSettlementStatus({});
+              }
+          } else {
+              setSettlementStatus({});
+          }
+      } else {
+          setSettlementStatus({});
       }
   }, [selectedGroup]);
 
@@ -449,7 +463,11 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ user, onLogout }) => {
           const data = await res.json();
           if (res.ok) {
               setTransactions([data.transaction, ...transactions]);
-              setSettlementStatus((prev) => ({ ...prev, [settlementKey]: 'paid' }));
+              setSettlementStatus((prev) => {
+                  const updated: Record<string, 'paid' | 'unpaid'> = { ...prev, [settlementKey]: 'paid' };
+                  localStorage.setItem(`settlementStatus_${selectedGroup.id}`, JSON.stringify(updated));
+                  return updated;
+              });
           } else {
               alert(data.error || 'Failed to record settlement');
           }
